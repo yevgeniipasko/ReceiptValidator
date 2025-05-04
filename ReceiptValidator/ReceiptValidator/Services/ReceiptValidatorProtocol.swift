@@ -10,7 +10,7 @@ import CoreML
 import Vision
 
 /// Result of receipt validation
-public struct ReceiptValidationResult {
+public struct ReceiptValidationResult: Equatable {
     /// Whether the image contains a receipt
     public let isReceipt: Bool
     
@@ -22,6 +22,14 @@ public struct ReceiptValidationResult {
     
     /// Bounding box of the receipt in normalized coordinates (if detected)
     public let boundingBox: CGRect?
+    
+    /// Implement Equatable manually since UIImage doesn't conform to Equatable
+    public static func == (lhs: ReceiptValidationResult, rhs: ReceiptValidationResult) -> Bool {
+        return lhs.isReceipt == rhs.isReceipt &&
+               lhs.confidence == rhs.confidence &&
+               lhs.boundingBox == rhs.boundingBox
+        // Note: we're intentionally not comparing segmentationMask since UIImage doesn't conform to Equatable
+    }
 }
 
 /// Protocol defining the receipt validation service capabilities

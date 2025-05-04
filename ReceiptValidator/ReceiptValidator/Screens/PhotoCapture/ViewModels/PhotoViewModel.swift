@@ -4,6 +4,8 @@
 //
 //  Created by Yevhenii on 5/3/25.
 //
+//  DEPRECATED: This ViewModel is deprecated and replaced by the integrated approach in HomeView.
+//  Use HomeViewModel and CameraCaptureView instead.
 
 import SwiftUI
 import UIKit

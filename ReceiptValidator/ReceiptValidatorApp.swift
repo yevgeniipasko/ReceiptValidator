@@ -14,7 +14,7 @@ struct ReceiptValidatorApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
                 .withServiceProvider(serviceProvider) // Inject service provider into environment
         }
     }

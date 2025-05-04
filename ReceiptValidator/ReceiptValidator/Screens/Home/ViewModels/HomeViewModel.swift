@@ -9,18 +9,15 @@ import Foundation
 import SwiftUI
 
 public class HomeViewModel: ObservableObject {
-    @Published public var isAnimating: Bool = false
     @Published public var features: [FeatureItem] = [
-        FeatureItem(icon: "checkmark.circle.fill", text: "Quick scan and verification"),
-        FeatureItem(icon: "lock.fill", text: "Secure and private"),
-        FeatureItem(icon: "doc.plaintext", text: "Text recognition")
+        FeatureItem(icon: "camera.viewfinder", text: "Instant receipt detection"),
+        FeatureItem(icon: "lock.shield", text: "Secure validation"),
+        FeatureItem(icon: "doc.text.magnifyingglass", text: "AI-powered recognition")
     ]
     
-    public init() {}
+    @Published public var capturedImage: UIImage?
     
-    public func startAnimation() {
-        isAnimating = true
-    }
+    public init() {}
 }
 
 public struct FeatureItem: Identifiable {
