@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		572843C22DC8190200053C6D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		5729C0AC2DC7145100CF3749 /* ReceiptValidator.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReceiptValidator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -45,6 +46,7 @@
 		5729C0A32DC7145100CF3749 = {
 			isa = PBXGroup;
 			children = (
+				572843C22DC8190200053C6D /* README.md */,
 				5729C0AE2DC7145100CF3749 /* ReceiptValidator */,
 				5729C0AD2DC7145100CF3749 /* Products */,
 			);
