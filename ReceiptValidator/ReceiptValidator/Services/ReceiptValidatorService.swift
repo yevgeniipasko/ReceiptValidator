@@ -1,8 +1,7 @@
+
 //
 //  ReceiptValidatorService.swift
 //  ReceiptValidator
-//
-//  Created by Yevhenii on 5/4/25.
 //
 
 import UIKit
@@ -21,15 +20,16 @@ public enum ReceiptValidatorError: Error {
 /// Service for validating receipts using the YOLOv11n-seg model
 public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceProtocol {
 
+    // MARK: - Constants
+
+    private struct Constants {
+        static let confidenceThreshold: Float = 0.9
+        static let resizeSize = CGSize(width: 640, height: 640)
+    }
+
     // MARK: - Properties
 
-    /// The confidence threshold for receipt detection (0.0 - 1.0)
-    private let confidenceThreshold: Float = 0.9
-
-    /// The YOLO ML Model
     private var yoloModel: MLModel?
-
-    /// VNCoreML Request
     private var visionRequest: VNCoreMLRequest?
 
     // MARK: - Initialization
@@ -38,7 +38,6 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
         setupModel()
     }
 
-    /// Sets up the YOLO ML model
     private func setupModel() {
         do {
             let model = try yolo11n_seg_receipt(configuration: MLModelConfiguration()).model
@@ -67,8 +66,7 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
             return
         }
 
-        // Resize the image to match model input size (example: 640x640)
-        let resizedImage = image.resize(to: CGSize(width: 640, height: 640))
+        let resizedImage = image.resize(to: Constants.resizeSize)
         guard let ciImage = CIImage(image: resizedImage) else {
             completion(.failure(ReceiptValidatorError.invalidImageFormat))
             return
@@ -84,14 +82,12 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
                 return
             }
 
-            // Find "var_1365" which is detections output
             guard let detectionOutput = results.first(where: { $0.featureName == "var_1365" }),
                   let detections = detectionOutput.featureValue.multiArrayValue else {
                 completion(.failure(ReceiptValidatorError.predictionFailed("No detections found.")))
                 return
             }
 
-            // Decode detections
             let result = processDetections(detections, originalImageSize: image.size)
             completion(.success(result))
 
@@ -116,11 +112,9 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
         var bestBoundingBox: CGRect?
 
         for i in 0..<numElements {
-            // YOLOv11 output: [x, y, width, height, confidence, class scores...]
-
             let confidence = detections[[0, 4, NSNumber(value: i)]].floatValue
 
-            if confidence < confidenceThreshold {
+            if confidence < Constants.confidenceThreshold {
                 continue
             }
 
@@ -129,7 +123,6 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
             let width = detections[[0, 2, NSNumber(value: i)]].floatValue
             let height = detections[[0, 3, NSNumber(value: i)]].floatValue
 
-            // Convert from normalized center x/y to CGRect in image coordinates
             let rect = CGRect(
                 x: CGFloat(centerX - width / 2) * originalImageSize.width,
                 y: CGFloat(centerY - height / 2) * originalImageSize.height,
@@ -147,7 +140,7 @@ public class ReceiptValidatorService: ObservableObject, ReceiptValidatorServiceP
             return ReceiptValidationResult(
                 isReceipt: true,
                 confidence: bestConfidence,
-                segmentationMask: nil, // segmentation processing is TODO (p output)
+                segmentationMask: nil,
                 boundingBox: boundingBox
             )
         } else {

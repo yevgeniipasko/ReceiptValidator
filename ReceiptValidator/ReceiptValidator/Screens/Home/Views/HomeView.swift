@@ -1,4 +1,3 @@
-
 //
 //  HomeView.swift
 //  ReceiptValidator
@@ -20,11 +19,44 @@ public struct HomeView: View {
     @State private var contentOpacity = 0.0
     @State private var buttonOffset: CGFloat = 50
 
+    private struct Constants {
+        // Layout
+        static let logoTopPadding: CGFloat = 30
+        static let horizontalPadding: CGFloat = 20
+        static let buttonHorizontalPadding: CGFloat = 25
+        static let buttonBottomPadding: CGFloat = 30
+        static let footerBottomPadding: CGFloat = 5
+
+        // Animation
+        static let contentAnimationDuration: Double = 0.5
+
+        // Logo
+        static let logoSize: CGFloat = 100
+        static let logoFontSize: CGFloat = 50
+        static let logoGradientColors = [Color.blue.opacity(0.7), Color.purple.opacity(0.4)]
+        static let logoShadowColor = Color.blue.opacity(0.3)
+        static let logoShadowRadius: CGFloat = 8
+        static let logoShadowYOffset: CGFloat = 4
+
+        // App Name
+        static let appNameFontSize: CGFloat = 30
+        static let appNameGradientColors = [Color.blue, Color.purple]
+
+        // Card
+        static let cardCornerRadius: CGFloat = 15
+        static let cardShadowColor = Color.black.opacity(0.1)
+        static let cardShadowRadius: CGFloat = 10
+        static let cardShadowYOffset: CGFloat = 5
+
+        // Footer
+        static let footerOpacity: Double = 0.8
+        static let footerCopyrightText: String = "© 2025 Receipt Validator"
+    }
+
     public init() {}
 
     public var body: some View {
         ZStack {
-            // Adaptive background for dark and light mode
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color(uiColor: .systemBackground),
@@ -38,20 +70,20 @@ public struct HomeView: View {
             VStack(spacing: 25) {
                 VStack(spacing: 15) {
                     Image(systemName: "doc.text.viewfinder")
-                        .font(.system(size: 50))
+                        .font(.system(size: Constants.logoFontSize))
                         .foregroundColor(.primary)
-                        .frame(width: 100, height: 100)
+                        .frame(width: Constants.logoSize, height: Constants.logoSize)
                         .background(
                             Circle()
-                                .fill(LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                                .fill(LinearGradient(colors: Constants.logoGradientColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .shadow(color: Constants.logoShadowColor, radius: Constants.logoShadowRadius, x: 0, y: Constants.logoShadowYOffset)
                         )
 
                     Text("Receipt Validator")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
+                        .font(.system(size: Constants.appNameFontSize, weight: .bold, design: .rounded))
+                        .foregroundStyle(LinearGradient(colors: Constants.appNameGradientColors, startPoint: .leading, endPoint: .trailing))
                 }
-                .padding(.top, 30)
+                .padding(.top, Constants.logoTopPadding)
 
                 Text("Validate receipts with advanced AI")
                     .font(.headline)
@@ -64,11 +96,11 @@ public struct HomeView: View {
                 }
                 .padding()
                 .background(
-                    RoundedRectangle(cornerRadius: 15)
+                    RoundedRectangle(cornerRadius: Constants.cardCornerRadius)
                         .fill(Color(uiColor: .secondarySystemBackground))
-                        .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                        .shadow(color: Constants.cardShadowColor, radius: Constants.cardShadowRadius, x: 0, y: Constants.cardShadowYOffset)
                 )
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Constants.horizontalPadding)
 
                 Spacer()
 
@@ -81,19 +113,19 @@ public struct HomeView: View {
                         ActionButtonView(icon: "photo.on.rectangle", text: "Photo Library", isPrimary: false)
                     }
                 }
-                .padding(.horizontal, 25)
-                .padding(.bottom, 30)
+                .padding(.horizontal, Constants.buttonHorizontalPadding)
+                .padding(.bottom, Constants.buttonBottomPadding)
                 .offset(y: buttonOffset)
 
-                Text("© 2025 Receipt Validator")
+                Text(Constants.footerCopyrightText)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 5)
+                    .foregroundColor(.secondary.opacity(Constants.footerOpacity))
+                    .padding(.bottom, Constants.footerBottomPadding)
             }
             .opacity(contentOpacity)
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(.easeInOut(duration: Constants.contentAnimationDuration)) {
                 contentOpacity = 1.0
                 buttonOffset = 0
             }
@@ -157,6 +189,21 @@ struct ActionButtonView: View {
     let text: String
     let isPrimary: Bool
 
+    private struct Constants {
+        static let cornerRadius: CGFloat = 12
+        static let primaryGradientColors = [Color.blue, Color.purple.opacity(0.8)]
+        static let secondaryBackgroundColor = Color(uiColor: .secondarySystemBackground)
+        static let primaryTextColor = Color.white
+        static let secondaryTextColor = Color.primary
+        static let primaryShadowColor = Color.blue.opacity(0.3)
+        static let secondaryShadowColor = Color.black.opacity(0.05)
+        static let primaryShadowRadius: CGFloat = 4
+        static let secondaryShadowRadius: CGFloat = 2
+        static let primaryShadowYOffset: CGFloat = 3
+        static let secondaryShadowYOffset: CGFloat = 1
+        static let paddingVertical: CGFloat = 15
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -165,29 +212,29 @@ struct ActionButtonView: View {
                 .font(.headline)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 15)
+        .padding(.vertical, Constants.paddingVertical)
         .background(
             Group {
                 if isPrimary {
                     LinearGradient(
-                        colors: [.blue, .purple.opacity(0.8)],
+                        colors: Constants.primaryGradientColors,
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 } else {
-                    Color(uiColor: .secondarySystemBackground)
+                    Constants.secondaryBackgroundColor
                 }
             }
         )
-        .foregroundColor(isPrimary ? .white : .primary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .foregroundColor(isPrimary ? Constants.primaryTextColor : Constants.secondaryTextColor)
+        .clipShape(RoundedRectangle(cornerRadius: Constants.cornerRadius))
         .overlay(
             Group {
                 if !isPrimary {
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: Constants.cornerRadius)
                         .stroke(
                             LinearGradient(
-                                colors: [.blue, .purple.opacity(0.8)],
+                                colors: Constants.primaryGradientColors,
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
@@ -197,10 +244,10 @@ struct ActionButtonView: View {
             }
         )
         .shadow(
-            color: isPrimary ? .blue.opacity(0.3) : .black.opacity(0.05),
-            radius: isPrimary ? 4 : 2,
+            color: isPrimary ? Constants.primaryShadowColor : Constants.secondaryShadowColor,
+            radius: isPrimary ? Constants.primaryShadowRadius : Constants.secondaryShadowRadius,
             x: 0,
-            y: isPrimary ? 3 : 1
+            y: isPrimary ? Constants.primaryShadowYOffset : Constants.secondaryShadowYOffset
         )
     }
 }
