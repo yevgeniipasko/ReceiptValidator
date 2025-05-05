@@ -1,7 +1,5 @@
-//
-//  CameraService.swift
-//  ReceiptValidator
-//
+
+// CameraService.swift
 
 import SwiftUI
 import UIKit
@@ -13,12 +11,16 @@ public class CameraService: NSObject, ObservableObject {
     @Published public private(set) var errorMessage = ""
     @Published public private(set) var captureSession: AVCaptureSession?
     @Published public private(set) var recentImage: UIImage?
+    @Published public private(set) var isCapturing = false
+    @Published public private(set) var isSessionRunning = false
+    @Published public private(set) var isCameraReady = false
 
-    // Session-specific photo output
     private var activePhotoOutput: AVCapturePhotoOutput?
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private var photoCaptureCompletionBlock: ((UIImage?, Error?) -> Void)?
     private var isConfiguring = false
+    private var cachedPhotoSettings: AVCapturePhotoSettings?
+    private var captureTimeoutTimer: Timer?
 
     public override init() {
         super.init()
@@ -56,6 +58,7 @@ public class CameraService: NSObject, ObservableObject {
                 }
                 return
             }
+
             newSession.addInput(videoDeviceInput)
 
             let photoOutput = AVCapturePhotoOutput()
@@ -71,6 +74,21 @@ public class CameraService: NSObject, ObservableObject {
             newSession.addOutput(photoOutput)
             self.activePhotoOutput = photoOutput
 
+            let settings = AVCapturePhotoSettings()
+            if #available(iOS 16.0, *) {
+                settings.maxPhotoDimensions = .init(width: 0, height: 0)
+            } else if photoOutput.isHighResolutionCaptureEnabled {
+                settings.isHighResolutionPhotoEnabled = true
+            }
+            if photoOutput.availablePhotoCodecTypes.contains(.jpeg) {
+                settings.embeddedThumbnailPhotoFormat = [AVVideoCodecKey: AVVideoCodecType.jpeg]
+            }
+            settings.flashMode = .off
+            settings.isDepthDataDeliveryEnabled = false
+            settings.isPortraitEffectsMatteDeliveryEnabled = false
+
+            self.cachedPhotoSettings = settings
+
             newSession.commitConfiguration()
             self.isConfiguring = false
 
@@ -78,6 +96,7 @@ public class CameraService: NSObject, ObservableObject {
 
             DispatchQueue.main.async {
                 self.captureSession = newSession
+                self.isSessionRunning = true
                 completion(nil)
             }
         }
@@ -99,32 +118,59 @@ public class CameraService: NSObject, ObservableObject {
 
             view.layer.addSublayer(previewLayer)
             self.previewLayer = previewLayer
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                if previewLayer.connection?.isEnabled == true {
+                    self?.isCameraReady = true
+                }
+            }
         }
     }
 
     func capturePhoto(completion: @escaping (UIImage?, Error?) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let captureSession = self.captureSession,
-                  captureSession.isRunning,
-                  let photoOutput = self.activePhotoOutput else {
-                DispatchQueue.main.async {
-                    completion(nil, NSError(domain: "CameraService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Capture session is not running or output not available"]))
+        guard let captureSession = self.captureSession,
+              captureSession.isRunning,
+              let photoOutput = self.activePhotoOutput else {
+            completion(nil, NSError(domain: "CameraService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Camera is not ready"]))
+            return
+        }
+
+        if isCapturing {
+            completion(nil, NSError(domain: "CameraService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Already capturing photo"]))
+            return
+        }
+
+        guard let settings = cachedPhotoSettings else {
+            completion(nil, NSError(domain: "CameraService", code: 3, userInfo: [NSLocalizedDescriptionKey: "Photo settings not prepared"]))
+            return
+        }
+
+        isCapturing = true
+        self.photoCaptureCompletionBlock = { [weak self] image, error in
+            self?.isCapturing = false
+            self?.captureTimeoutTimer?.invalidate()
+            self?.captureTimeoutTimer = nil
+            completion(image, error)
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.captureTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: false) { _ in
+                if self?.isCapturing == true {
+                    self?.photoCaptureCompletionBlock?(nil, NSError(domain: "CameraService", code: 999, userInfo: [NSLocalizedDescriptionKey: "Capture timeout - photo capture took too long"]))
                 }
-                return
-            }
-
-            let settings = AVCapturePhotoSettings()
-            self.photoCaptureCompletionBlock = completion
-
-            DispatchQueue.main.async {
-                photoOutput.capturePhoto(with: settings, delegate: self)
             }
         }
+
+        photoOutput.capturePhoto(with: settings, delegate: self)
     }
 
-    func stopSession() {
-        guard let session = captureSession else { return }
+    func stopSession(completion: (() -> Void)? = nil) {
+        guard let session = captureSession else {
+            DispatchQueue.main.async {
+                completion?()
+            }
+            return
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             if self?.isConfiguring == true {
@@ -137,30 +183,12 @@ public class CameraService: NSObject, ObservableObject {
 
             DispatchQueue.main.async {
                 self?.captureSession = nil
+                self?.isSessionRunning = false
                 self?.activePhotoOutput = nil
                 self?.previewLayer = nil
+                self?.isCameraReady = false
+                completion?()
             }
-        }
-    }
-
-    func configureLibraryPicker(delegate: UIImagePickerControllerDelegate & UINavigationControllerDelegate) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .photoLibrary
-        picker.delegate = delegate
-        picker.allowsEditing = true
-        return picker
-    }
-
-    func handleCameraError(error: Error) {
-        DispatchQueue.main.async { [weak self] in
-            self?.errorMessage = error.localizedDescription
-            self?.showCaptureError = true
-        }
-    }
-
-    func setImage(_ image: UIImage) {
-        DispatchQueue.main.async { [weak self] in
-            self?.recentImage = image
         }
     }
 }
@@ -176,9 +204,8 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
 
         guard let imageData = photo.fileDataRepresentation(),
               let image = UIImage(data: imageData) else {
-            let error = NSError(domain: "CameraService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not create image from photo data"])
             DispatchQueue.main.async {
-                self.photoCaptureCompletionBlock?(nil, error)
+                self.photoCaptureCompletionBlock?(nil, NSError(domain: "CameraService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not create image from photo data"]))
             }
             return
         }

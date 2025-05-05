@@ -1,93 +1,55 @@
-//
-//  CameraCaptureView.swift
-//  ReceiptValidator
-//
-//  Created by Yevhenii on 5/4/25.
-//
+
+// CameraCaptureView.swift
 
 import SwiftUI
-import AVFoundation
 
-/// A view for capturing photos using the device camera
-public struct CameraCaptureView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @Environment(\.serviceProvider) private var serviceProvider
+struct CameraCaptureView: View {
+
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var cameraService = CameraService()
     @Binding var image: UIImage?
-    
-    public var body: some View {
+
+    var body: some View {
         ZStack {
-            // Camera preview
-            CameraView(cameraService: serviceProvider.cameraService)
-                .edgesIgnoringSafeArea(.all)
-            
+            CameraView(cameraService: cameraService)
+                .ignoresSafeArea()
+
             VStack {
                 Spacer()
-                
-                HStack {
-                    // Cancel button
+
+                if cameraService.isCapturing {
+                    ProgressView("Capturing...")
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .padding()
+                } else if cameraService.isCameraReady {
                     Button(action: {
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white)
-                            .padding()
-                    }
-                    
-                    Spacer()
-                    
-                    // Capture button
-                    Button(action: {
-                        capturePhoto()
+                        cameraService.capturePhoto { capturedImage, error in
+                            if let error = error {
+                                print("Capture error: \(error.localizedDescription)")
+                                return
+                            }
+
+                            if let capturedImage = capturedImage {
+                                self.image = capturedImage
+                                dismiss()
+
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    cameraService.stopSession()
+                                }
+                            }
+                        }
                     }) {
                         Circle()
                             .fill(Color.white)
                             .frame(width: 70, height: 70)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.black.opacity(0.3), lineWidth: 2)
-                                    .frame(width: 60, height: 60)
-                            )
+                            .padding()
+                            .shadow(radius: 5)
                     }
-                    
-                    Spacer()
-                    
-                    // Spacer to balance layout
-                    Circle()
-                        .fill(Color.clear)
-                        .frame(width: 30, height: 30)
+                } else {
+                    ProgressView("Camera starting...")
                         .padding()
                 }
-                .padding(.bottom, 30)
-            }
-        }
-        .onAppear {
-            // Start camera session when view appears
-            serviceProvider.cameraService.startSession { error in
-                if let error = error {
-                    print("Camera error: \(error)")
-                }
-            }
-        }
-        .onDisappear {
-            // Stop camera session when view disappears
-            serviceProvider.cameraService.stopSession()
-        }
-    }
-    
-    // Capture photo using camera service
-    private func capturePhoto() {
-        serviceProvider.cameraService.capturePhoto { capturedImage, error in
-            if let error = error {
-                print("Photo capture error: \(error)")
-                return
-            }
-            
-            if let capturedImage = capturedImage {
-                // Set the captured image and dismiss the camera view
-                self.image = capturedImage
-                presentationMode.wrappedValue.dismiss()
             }
         }
     }
-} 
+}

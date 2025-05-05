@@ -106,7 +106,11 @@ public class PhotoViewModel: NSObject, ObservableObject, UIImagePickerController
     
     // Create the appropriate image picker for photo library
     func makeImagePicker() -> UIImagePickerController {
-        return cameraService.configureLibraryPicker(delegate: self)
+        let picker = UIImagePickerController()
+        picker.sourceType = .photoLibrary
+        picker.delegate = self
+        picker.allowsEditing = true
+        return picker
     }
     
     // Handle selected image from UIImagePickerController
